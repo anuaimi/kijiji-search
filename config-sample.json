@@ -1,0 +1,7 @@
+{
+  "logging_level" : "info",
+  "oldest_listing" : "7",
+  "mj_api_key" : "--add-api-key--",
+  "mj_api_secret" : "--add-api-secret--"
+
+}
