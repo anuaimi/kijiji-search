@@ -17,7 +17,6 @@ This will run a search against Kijiji's websetup every hour and notify you by em
   - email log file (errors only) once a day
 - providate a way to update search details without a new deploy??
 
-
 ## Setup
 
 ```bash
@@ -36,7 +35,7 @@ export MJ_API_SECRET="--api-secret--"
 
 ## Build
 
-```
+```bash
 docker build -t kijiji-search .
 docker run -it -n kijiji-search kijiji-search
 # docker kill kijiji-search
@@ -44,14 +43,12 @@ docker run -it -n kijiji-search kijiji-search
 ```
 
 with secrets
-```
+
+```bash
 docker run -it -n kijiji-search -e MJ_API='' -e MJ_SECRET='' kijiji-search
 ```
 
-https://kijiji.ca
-/v-canoe-kayak-paddle-boat/barrie/nucanoe-ultimate-kayak-arriving-soon-in-barrie-all-colours/1553248243?undefined
-
-
+<!-- 
 individual page
 -----
 -title in class'itemTitleWrapper' div div h1
@@ -59,4 +56,4 @@ individual page
 - page also has itemprop='price' which in <span>
 - itemprop='dataPosted'
 - itemprop='address'
-- itemprop='image'
+- itemprop='image' -->

@@ -1,17 +1,22 @@
 import asyncio
+from datetime import datetime
 import json
 import logging
+from string import Template
 import os
 import sqlite3
 
 from pyppeteer import launch
 from mailjet_rest import Client
 
+
 # desired search
 KIJIJI_HOST = "https://kijiji.ca"
-
 QUERY = "/b-boat-watercraft/barrie/canoe/k0c29l1700006"
 PARAM = "?ll=44.327238%2C-80.106186&address=Creemore%2C+ON&radius=100.0"
+URL = KIJIJI_HOST + QUERY + PARAM
+
+DB_NAME = 'kijiji.db'
 
 # queries = [
 #     {
@@ -24,13 +29,14 @@ PARAM = "?ll=44.327238%2C-80.106186&address=Creemore%2C+ON&radius=100.0"
 #     }
 # ]
 
-URL = KIJIJI_HOST + QUERY + PARAM
     
+# get logging setup
 logging.basicConfig(filename='messages.log', format='%(asctime)s %(levelname)s: %(message)s')
 logger = logging.getLogger('__name__')
 logger.setLevel(logging.INFO)
 
 
+# load_config reads config file & and environment variables
 def load_config():
     data = None
     try:
@@ -63,42 +69,31 @@ def load_config():
     logger.info("read settings from config.json")
     return data
 
-def is_valid_config(config):
-    print(config['mj_api_key'])
+# setup_mailjet initializes mailjet object
+def setup_mailjet(config):
     if not ('mj_api_key' in config):
-        msg = "mailjet api key not set"
-        logger.error(msg)
-        print(msg)
-        return False
-
-    if not ('mj_api_secret' in config):
-        msg = "mailjet api secret not set"
-        logger.error(msg)
-        print(msg)
-        return False
-
-    return True
-
-def setup_mailjet(api_key, api_secret):
-    if (len(api_key) == 0):
         logger.error("MJ_API_KEY not setup in config")
         return None
-    if (len(api_secret) == 0):
+    if not ('mj_api_secret' in config):
         logger.error("MJ_API_SECRET not setup in config")
         return None
-    mailjet = Client(auth=(api_key, api_secret), version='v3.1')
+    mailjet = Client(auth=(config['mj_api_key'], config['mj_api_secret']), version='v3.1')
+
     return mailjet
 
+# setup_db will create sqlite database
 def setup_db():
 
-    conn = sqlite3.connect("kijiji.db") 
+    conn = sqlite3.connect(DB_NAME) 
     cursor = conn.cursor()
 
+    # see if table already exists
     cursor.execute(''' SELECT count(name) FROM sqlite_master WHERE type='table' AND name='listings' ''')
 
     #if the count is 1, then table exists
     if cursor.fetchone()[0]!=1 :
-        logger.info('setting up database')
+        # ok, we need to create the database & table(s)
+        logger.info('creating database')
 		
         create_table_sql = """
 CREATE TABLE listings (
@@ -112,12 +107,14 @@ CREATE TABLE listings (
         conn.commit()
         
     conn.close()
+    return True
 
+# is_new_listing will check if we have seen that listing before
 def is_new_listing( id, url):
 
     found = False
 
-    conn = sqlite3.connect("kijiji.db") 
+    conn = sqlite3.connect(DB_NAME) 
     cursor = conn.cursor()
 
     # see if listing already in db
@@ -126,10 +123,9 @@ def is_new_listing( id, url):
     records = cursor.fetchall()
 
     # if not, add it
-    # TODO: add timestamp for when added
     if len(records) == 0:
-        insert_listing_sql = ''' INSERT INTO 'listings' ('listing_id', 'url') VALUES (?,?); '''
-        data_tuple = ( id, url)
+        insert_listing_sql = ''' INSERT INTO 'listings' ('listing_id', 'url', 'date_added') VALUES (?,?,?); '''
+        data_tuple = ( id, url, datetime.now())
         cursor.execute( insert_listing_sql, data_tuple)
         conn.commit()
         # print("inserted new listing",id)
@@ -142,7 +138,7 @@ def is_new_listing( id, url):
 async def get_listing_details(browser, id, url):
     # build url 
     full_url = "http://kijiji.ca" + url
-    logger.debug(full_url)
+    # logger.debug(full_url)
 
     # use pyppeteer to load page
     page = await browser.newPage()
@@ -168,9 +164,21 @@ async def get_listing_details(browser, id, url):
         }
 
         title = ""
-        title_nodes = document.querySelectorAll('[itemProp="name"]')
+        title_nodes = document.querySelectorAll('h1[class^="title"]')
         if (title_nodes.length > 0) {
             title = title_nodes[0].textContent
+        }
+
+        address = ""
+        address_nodes = document.querySelectorAll('[itemProp="address"]')
+        if (address_nodes.length > 0) {
+            address = address_nodes[0].textContent
+        }
+
+        datePosted = ""
+        date_nodes = document.querySelectorAll('[itemProp="datePosted"]')
+        if (date_nodes.length > 0) {
+            datePosted = date_nodes[0].textContent
         }
 
         //  look for data on page
@@ -188,19 +196,27 @@ async def get_listing_details(browser, id, url):
             title: title,
             price: price,
             description: description,
+            address: address,
+            datePosted: datePosted,
         }
     }''')
 
-    # TODO fix title - is prov not title right now
-
-    print(results['title'])
+    # print(results['title'])
     # print(results['price'])
     # print(results['description'])
     # address
     # posted time
     
-    # TODO add clickable link in email
     # TODO build message body to include price and clickable link
+    kijiji_link = KIJIJI_HOST + url 
+    html_template = Template("<div>$price</div><br/><div>$date_posted</div><br/><div>$desc</div><br/><div>$address</div><br/><div><a href='$url'>$url</a></div>")
+    html_text = html_template.substitute({ 
+                    'price' : results['price'], 
+                    'desc' : results['description'], 
+                    'url' : kijiji_link,
+                    'address' : results['address'],
+                    'date_posted': results['datePosted'],
+                })
 
     data = {
         'Messages': [
@@ -216,7 +232,7 @@ async def get_listing_details(browser, id, url):
                     }
                 ],
                 "Subject" : "kijiji: " + results['title'],
-                "TextPart" : results['description'],
+                "HTMLPart" : html_text,
             }
         ]
     }
@@ -267,7 +283,8 @@ async def search():
         # print(listing['id'], listing['url'])
         found = is_new_listing(listing['id'], listing['url'])
         if found == False:
-            print("new listing: ", listing['id'], "  ", listing['url'])
+            message = "new listing: " + listing['id'] + " (" + listing['url'] + ")"
+            logger.info(message)
             await get_listing_details( browser, listing['id'], listing['url'])
 
     await browser.close()
@@ -280,14 +297,15 @@ config = load_config()
 if config is None:
     exit()
 
-mailjet = setup_mailjet(config['mj_api_key'], config['mj_api_secret'])
+mailjet = setup_mailjet(config)
 if mailjet is None:
     exit()
 
 setup_db()
 
 
-exit()
+# time to get to work
+# ready to search kijiji for what we're looking for
 
 # TODO figure how to deploy to run every x minutes (from config)
 # TODO deploy using docker or something else? docker bad if want to change search
