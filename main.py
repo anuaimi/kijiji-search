@@ -14,23 +14,14 @@ from mailjet_rest import Client
 KIJIJI_HOST = "https://kijiji.ca"
 DB_NAME = 'kijiji.db'
 
-# queries = [
-#     {
-#         query: "/b-boat-watercraft/barrie/canoe/k0c29l1700006",
-#         param: "?ll=44.327238%2C-80.106186&address=Creemore%2C+ON&radius=100.0"
-#     },
-#     {
-#         query: "",
-#         param: ""
-#     }
-# ]
-
     
-# get logging setup
-logging.basicConfig(filename='messages.log', format='%(asctime)s %(levelname)s: %(message)s')
-logger = logging.getLogger('__name__')
-logger.setLevel(logging.INFO)
-
+# setup_logging will configures the logger used 
+def setup_logging(logger):
+    log_handler = logging.StreamHandler()
+    log_format = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
+    log_handler.setFormatter(log_format)
+    logger.addHandler(log_handler)
+    logger.setLevel(logging.INFO)
 
 # load_config reads config file & and environment variables
 def load_config():
@@ -38,9 +29,9 @@ def load_config():
     try:
         with open("config.json") as json_data_file:
             data = json.load(json_data_file)
-        # print(data)
+        logger.debug(data)
     except:
-        print("config.json file missing or can't be read")
+        logger.error("config.json file missing or can't be read")
 
     # see if environment has some config settings
     api_key = os.getenv('MJ_API_KEY')
@@ -71,7 +62,7 @@ def load_queries():
     try:
         with open("queries.json") as json_data_file:
             queries = json.load(json_data_file)
-        # print(queries)
+        logger.debug(queries)
         logger.info("loaded " + str(len(queries)) + " queries")
     except:
         logger.error("queries.json file missing or can't be read")
@@ -108,7 +99,6 @@ def setup_db():
     #if the count is 1, then table exists
     if cursor.fetchone()[0]!=1 :
         # ok, we need to create the database & table(s)
-        logger.info('creating database')
 		
         create_table_sql = """
 CREATE TABLE listings (
@@ -120,6 +110,7 @@ CREATE TABLE listings (
 """
         cursor.execute(create_table_sql)
         conn.commit()
+        logger.info('database initialized')
         
     conn.close()
     return True
@@ -143,7 +134,7 @@ def is_new_listing( id, url):
         data_tuple = ( id, url, datetime.now())
         cursor.execute( insert_listing_sql, data_tuple)
         conn.commit()
-        # print("inserted new listing",id)
+        logger.debug("saved listing " + str(id) + " to database")
     else:
         found = True
 
@@ -216,9 +207,9 @@ async def get_listing_details(browser, id, url, exclusions):
         }
     }''')
 
-    # print(results['title'])
-    # print(results['price'])
-    # print(results['description'])
+    # logger.debug(results['title'])
+    # logger.debug(results['price'])
+    # logger.debug(results['description'])
 
 
     # see how old it is
@@ -271,11 +262,10 @@ async def get_listing_details(browser, id, url, exclusions):
     }
     send_result = mailjet.send.create(data=data)
     if send_result.status_code == 200:
-        logger.info("sent email notification")
+        logger.info("sent email with listing details")
     else:
-        logger.error("could not send email: " + send_result.status_code)
-    # print(send_result.status_code)
-    # print(send_result.json())
+        logger.error("could not send email: " + str(send_result.status_code))
+        # logger.debug(send_result.json())
 
     # page.close()
 
@@ -290,9 +280,6 @@ async def search(query_details):
     page.setDefaultNavigationTimeout(60000)    # seconds rather than 30
 
     kijiji_url = KIJIJI_HOST + query_details['query'] + query_details['parameters']
-
-
-    # TODO set URL to query_details['query'] and parameters
 
     # do a search
     await page.goto(kijiji_url, {'waitUntil': 'load'})
@@ -322,6 +309,8 @@ async def search(query_details):
 
     # go through results and see if any new
     listings = results['listings']
+    logger.info("search returned " + str(len(listings)) + " results")
+
     for listing in listings:
         # print(listing['id'], listing['url'])
         found = is_new_listing(listing['id'], listing['url'])
@@ -334,6 +323,9 @@ async def search(query_details):
 
 
 # START HERE
+
+logger = logging.getLogger('__name__')
+setup_logging(logger)
 
 # read config values
 config = load_config()
@@ -366,3 +358,4 @@ for query in queries:
     asyncio.get_event_loop().run_until_complete(search(query))
     logger.info("completed search")
 
+# done

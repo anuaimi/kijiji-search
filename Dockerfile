@@ -9,4 +9,4 @@ WORKDIR .
 COPY main.py .
 COPY config.json .
 
-CMD [ "python", "main.py"]
+CMD [ "pipenv", "run", "python", "main.py"]

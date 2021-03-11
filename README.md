@@ -6,13 +6,11 @@ This will run a search against Kijiji's websetup every hour and notify you by em
 
 ## TODO
 
-- ignore if has 'wanted' or 'kayak' in title
-- add log messages for 'start of search' and # found
-- don't send emails for listing that are older than 3 days (from config)
-- make work with honda search as well
-
-- if deploy using docker, should be able to put api keys in env variable
+- don't log to file
+- config mailjet keys when run in docker
 - deploy to cloud and see if still works
+- docker should store db in underlying filesystem so if stop/start, don't lose
+- do we want to backup db?
 - ship database and make sure db is shared between containers?
 - run every hour
 - monitor (through liveness probe?)
