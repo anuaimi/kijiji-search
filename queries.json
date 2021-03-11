@@ -1,0 +1,16 @@
+[
+  {
+    "name" : "canoe",
+    "query" : "/b-boat-watercraft/barrie/canoe/k0c29l1700006",
+    "parameters" : "?ll=44.327238%2C-80.106186&address=Creemore%2C+ON&radius=100.0",
+    "exclude" : ["wanted", "kayak"],
+    "email" : "athir@nuaimi.com"
+  },
+  {
+    "name" : "honda crf250l",
+    "query" : "/b-motorcycles/barrie/honda-crf250l/k0c30l1700006",
+    "parameters" : "?ll=44.327238%2C-80.106186&address=Creemore%2C+ON&radius=100.0",
+    "exclude" : ["wanted"],
+    "email" : "athir@nuaimi.com"
+  }
+]

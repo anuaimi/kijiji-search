@@ -12,10 +12,6 @@ from mailjet_rest import Client
 
 # desired search
 KIJIJI_HOST = "https://kijiji.ca"
-QUERY = "/b-boat-watercraft/barrie/canoe/k0c29l1700006"
-PARAM = "?ll=44.327238%2C-80.106186&address=Creemore%2C+ON&radius=100.0"
-URL = KIJIJI_HOST + QUERY + PARAM
-
 DB_NAME = 'kijiji.db'
 
 # queries = [
@@ -68,6 +64,25 @@ def load_config():
 
     logger.info("read settings from config.json")
     return data
+
+# load_config reads config file & and environment variables
+def load_queries():
+    queries = None
+    try:
+        with open("queries.json") as json_data_file:
+            queries = json.load(json_data_file)
+        # print(queries)
+        logger.info("loaded " + str(len(queries)) + " queries")
+    except:
+        logger.error("queries.json file missing or can't be read")
+        return None
+
+    # see if environment has some config settings
+    if len(queries) == 0:
+        logger.warn("queries file has no queries")
+        return None
+
+    return queries
 
 # setup_mailjet initializes mailjet object
 def setup_mailjet(config):
@@ -204,10 +219,30 @@ async def get_listing_details(browser, id, url):
     # print(results['title'])
     # print(results['price'])
     # print(results['description'])
-    # address
-    # posted time
-    
-    # TODO build message body to include price and clickable link
+
+
+    # see how old it is
+    #   datePosted will have one of the following: 'minutes', 'hours', 'day' 'days'
+
+    datePosted = results['datePosted']
+    if datePosted.lower().find('days') > 0:
+        logger.info("skipping as was posted days ago")
+        return
+    if datePosted.lower().find('month') > 0:
+        logger.info("skipping as was posted over a month ago")
+        return
+
+    # see if it include exclusion word in title
+    #  'wanted' or 'kayak' in title
+    title = results['title']
+    if title.lower().find('wanted') >= 0:
+        logger.info("skipping as is wanted ad")
+        return 
+    if title.lower().find('kayak') >= 0:
+        logger.info("skipping as for a kakak")
+        return 
+
+    # build message body to include price and clickable link
     kijiji_link = KIJIJI_HOST + url 
     html_template = Template("<div>$price</div><br/><div>$date_posted</div><br/><div>$desc</div><br/><div>$address</div><br/><div><a href='$url'>$url</a></div>")
     html_text = html_template.substitute({ 
@@ -215,7 +250,7 @@ async def get_listing_details(browser, id, url):
                     'desc' : results['description'], 
                     'url' : kijiji_link,
                     'address' : results['address'],
-                    'date_posted': results['datePosted'],
+                    'date_posted': datePosted,
                 })
 
     data = {
@@ -237,22 +272,32 @@ async def get_listing_details(browser, id, url):
         ]
     }
     send_result = mailjet.send.create(data=data)
-    print(send_result.status_code)
-    print(send_result.json())
+    if send_result.status_code == 200:
+        logger.info("sent email notification")
+    else:
+        logger.error("could not send email: " + send_result.status_code)
+    # print(send_result.status_code)
+    # print(send_result.json())
 
     # page.close()
 
     # return details to caller
-    return True
+    return
 
-async def search():
+async def search(query_details):
+
     browser = await launch()
     # browser = await launch(headless=False)
     page = await browser.newPage()
     page.setDefaultNavigationTimeout(60000)    # seconds rather than 30
 
+    kijiji_url = KIJIJI_HOST + query_details['query'] + query_details['parameters']
+
+
+    # TODO set URL to query_details['query'] and parameters
+
     # do a search
-    await page.goto(URL, {'waitUntil': 'load'})
+    await page.goto(kijiji_url, {'waitUntil': 'load'})
 
     results = await page.evaluate('''() => {
 
@@ -283,7 +328,7 @@ async def search():
         # print(listing['id'], listing['url'])
         found = is_new_listing(listing['id'], listing['url'])
         if found == False:
-            message = "new listing: " + listing['id'] + " (" + listing['url'] + ")"
+            message = "found listing: " + listing['id'] + " (" + listing['url'] + ")"
             logger.info(message)
             await get_listing_details( browser, listing['id'], listing['url'])
 
@@ -295,6 +340,11 @@ async def search():
 # read config values
 config = load_config()
 if config is None:
+    exit()
+
+# get searches we need to run
+queries = load_queries()
+if queries is None:
     exit()
 
 mailjet = setup_mailjet(config)
@@ -311,7 +361,10 @@ setup_db()
 # TODO deploy using docker or something else? docker bad if want to change search
 #      or do I ssh in and change config file?
 
-# search on kijiji
-asyncio.get_event_loop().run_until_complete(search())
 
-logger.info("completed search")
+# search on kijiji
+for query in queries:
+    logger.info("starting search for " + query['name'])
+    asyncio.get_event_loop().run_until_complete(search(query))
+    logger.info("completed search")
+
