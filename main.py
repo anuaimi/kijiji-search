@@ -150,7 +150,7 @@ def is_new_listing( id, url):
     conn.close()
     return found
 
-async def get_listing_details(browser, id, url):
+async def get_listing_details(browser, id, url, exclusions):
     # build url 
     full_url = "http://kijiji.ca" + url
     # logger.debug(full_url)
@@ -234,13 +234,11 @@ async def get_listing_details(browser, id, url):
 
     # see if it include exclusion word in title
     #  'wanted' or 'kayak' in title
-    title = results['title']
-    if title.lower().find('wanted') >= 0:
-        logger.info("skipping as is wanted ad")
-        return 
-    if title.lower().find('kayak') >= 0:
-        logger.info("skipping as for a kakak")
-        return 
+    for exclude_str in exclusions:
+        title = results['title']
+        if title.lower().find(exclude_str) >= 0:
+            logger.info("skipping as title has " + exclude_str + " in it")
+            return 
 
     # build message body to include price and clickable link
     kijiji_link = KIJIJI_HOST + url 
@@ -330,7 +328,7 @@ async def search(query_details):
         if found == False:
             message = "found listing: " + listing['id'] + " (" + listing['url'] + ")"
             logger.info(message)
-            await get_listing_details( browser, listing['id'], listing['url'])
+            await get_listing_details( browser, listing['id'], listing['url'], query_details['exclude'])
 
     await browser.close()
 
