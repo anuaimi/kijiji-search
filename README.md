@@ -2,12 +2,15 @@
 
 ## Overview
 
-This will run a search against Kijiji's websetup every hour and notify you by email if there are any new listings.
+This will run a search against Kijiji's websetup regularly and notify you by email if there are any new listings.  It does this by using pyppeteer (which uses a real browser) and doing the search the same way that a user would.
+
+You need to generate the query yourself in a real browser and copy the results to `queries.json`.  The file can have multiple queries in it and all of them will be run each cycle.
 
 ## TODO
 
-- don't log to file
-- config mailjet keys when run in docker
+- validate that hand built approach works with dockerfile
+- make it work locally as well as in docker (which chrome)
+  - would this problem go away if not alpine?
 - deploy to cloud and see if still works
 - docker should store db in underlying filesystem so if stop/start, don't lose
 - do we want to backup db?
@@ -17,6 +20,7 @@ This will run a search against Kijiji's websetup every hour and notify you by em
 - need some way to make sure it is still working??
   - email log file (errors only) once a day
 - providate a way to update search details without a new deploy??
+  - have config in seperate directory that is shared with base filesystem
 
 ## Setup
 
@@ -43,18 +47,21 @@ docker run -it -n kijiji-search kijiji-search
 # docker rm kijiji-search
 ```
 
+## Running
+
 with secrets
 
 ```bash
-docker run -it -n kijiji-search -e MJ_API='' -e MJ_SECRET='' kijiji-search
+export MY_API_KEY=""
+export MY_API_SECRET=""
+docker run -it -n kijiji-search -e MJ_API=$MJ_API_KEY -e MJ_SECRET=$MY_API_SECRET kijiji-search
 ```
 
-<!-- 
-individual page
------
--title in class'itemTitleWrapper' div div h1
-- description in class='showMoreWrapper' div div div'itemProp=description'
-- page also has itemprop='price' which in <span>
-- itemprop='dataPosted'
-- itemprop='address'
-- itemprop='image' -->
+## Debugging
+
+You can debug docker issues by starting a python container and running the various command in the docker file.  Also you can use the following to debug pyppeteer issues
+
+```python
+from pyppeteer.launcher import Launcher
+' '.join(Launcher().cmd)
+```

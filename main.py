@@ -274,8 +274,10 @@ async def get_listing_details(browser, id, url, exclusions):
 
 async def search(query_details):
 
-    browser = await launch()
-    # browser = await launch(headless=False)
+    # executablePath='/usr/bin/chromium-browser'
+    
+    browser = await launch(executablePath='/usr/bin/chromium-browser', args=['--no-sandbox', '--headless', '--disable-gpu'])
+    # browser = await launch(executablePath='/usr/bin/chromium-browser', args=['--no-sandbox'], headless=False)
     page = await browser.newPage()
     page.setDefaultNavigationTimeout(60000)    # seconds rather than 30
 
