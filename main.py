@@ -10,7 +10,7 @@ from pyppeteer import launch
 from mailjet_rest import Client
 
 
-# desired search
+# constants
 KIJIJI_HOST = "https://kijiji.ca"
 DB_NAME = 'kijiji.db'
 
