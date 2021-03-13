@@ -1,6 +1,6 @@
 .vscode
-kijiji.db
-config.json
-queries.json
+data/kijiji.db
+data/config.json
+data/queries.json
 
 
