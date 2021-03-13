@@ -12,8 +12,9 @@ from mailjet_rest import Client
 
 # constants
 KIJIJI_HOST = "https://kijiji.ca"
-DB_NAME = 'kijiji.db'
-
+DB_NAME = '/data/kijiji.db'
+SETTINGS_FILE = '/data/config.json'
+QUERIES_FILE = '/data/queries.json'
     
 # setup_logging will configures the logger used 
 def setup_logging(logger):
@@ -27,7 +28,7 @@ def setup_logging(logger):
 def load_config():
     data = None
     try:
-        with open("config.json") as json_data_file:
+        with open(SETTINGS_FILE) as json_data_file:
             data = json.load(json_data_file)
         logger.debug(data)
     except:
@@ -60,7 +61,7 @@ def load_config():
 def load_queries():
     queries = None
     try:
-        with open("queries.json") as json_data_file:
+        with open(QUERIES_FILE) as json_data_file:
             queries = json.load(json_data_file)
         logger.debug(queries)
         logger.info("loaded " + str(len(queries)) + " queries")

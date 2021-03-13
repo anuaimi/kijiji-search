@@ -8,13 +8,10 @@ You need to generate the query yourself in a real browser and copy the results t
 
 ## TODO
 
-- validate that hand built approach works with dockerfile
-- make it work locally as well as in docker (which chrome)
-  - would this problem go away if not alpine?
-- deploy to cloud and see if still works
-- docker should store db in underlying filesystem so if stop/start, don't lose
-- do we want to backup db?
-- ship database and make sure db is shared between containers?
+- deploy to cloud and see if still works (digital ocean)
+- setup to run with cron
+- sqlite doesn't work in k8s as could have several pods??
+
 - run every hour
 - monitor (through liveness probe?)
 - need some way to make sure it is still working??
@@ -41,10 +38,22 @@ export MJ_API_SECRET="--api-secret--"
 ## Build
 
 ```bash
-docker build -t kijiji-search .
-docker run -it -n kijiji-search kijiji-search
+docker build -t anuaimi/kijiji-search .
+docker run -it --name kijiji-search anuaimi/kijiji-search
 # docker kill kijiji-search
 # docker rm kijiji-search
+# docker push anuaimi/kijiji-search
+```
+
+## Deploying
+
+```bash
+doctl compute droplet create --image docker-20-04 --size s-1vcpu-1gb --region tor1 --ssh-keys --fingerprint-- kijiji-search
+# doctl compute droplet create --image ubuntu-20-04-x64 --size s-1vcpu-1gb --region tor1 --ssh-keys --fingerprint-- kijiji-search
+ssh root@serverIP
+# apt-get update
+# apt-get install -y docker.io
+
 ```
 
 ## Running
@@ -54,7 +63,8 @@ with secrets
 ```bash
 export MY_API_KEY=""
 export MY_API_SECRET=""
-docker run -it -n kijiji-search -e MJ_API=$MJ_API_KEY -e MJ_SECRET=$MY_API_SECRET kijiji-search
+docker run -it --name kijiji-search -e MJ_API_KEY=$MJ_API_KEY -e MJ_API_SECRET=$MJ_API_SECRET kijiji-search
+docker run -it --name kijiji-search -e MJ_API_KEY=$MJ_API_KEY -e MJ_API_SECRET=$MJ_API_SECRET -v data:/data kijiji-search
 ```
 
 ## Debugging

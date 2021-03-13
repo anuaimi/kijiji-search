@@ -11,8 +11,11 @@ RUN pip install pipenv
 COPY Pipfile* ./
 RUN pipenv install 
 
+# RUN mkdir /data
+# COPY config.json queries.json /data/
+
 # setup main app
 COPY main.py /
-COPY config.json queries.json /
+# COPY config.json queries.json /
 
 CMD [ "pipenv", "run", "python", "main.py"]
