@@ -1,25 +1,14 @@
-# KIJIJI SEARCH MONITOR
+# Kijiji Search
 
 ## Overview
 
-This will run a search against Kijiji's websetup regularly and notify you by email if there are any new listings.  It does this by using pyppeteer (which uses a real browser) and doing the search the same way that a user would.
+This will run a search against Kijiji's websetup regularly and notify you by email if there are any new listings.  This is useful of items that are hard to find and that don't last long. It does this by using pyppeteer (which uses a real browser) and doing the search the same way that a user would.
 
-You need to generate the query yourself in a real browser and copy the results to `queries.json`.  The file can have multiple queries in it and all of them will be run each cycle.
-
-## TODO
-
-- deploy to cloud and see if still works (digital ocean)
-- setup to run with cron
-- sqlite doesn't work in k8s as could have several pods??
-
-- run every hour
-- monitor (through liveness probe?)
-- need some way to make sure it is still working??
-  - email log file (errors only) once a day
-- providate a way to update search details without a new deploy??
-  - have config in seperate directory that is shared with base filesystem
+You need to generate the query yourself in a real browser and copy the results to `data/queries.json`.  The file can have multiple queries in it and all of them will be run each cycle.
 
 ## Setup
+
+make sure you have Pipenv install and then create a new environment for the project
 
 ```bash
 pip install pipenv
@@ -39,24 +28,28 @@ export MJ_API_SECRET="--api-secret--"
 
 ```bash
 docker build -t anuaimi/kijiji-search .
-docker run -it --name kijiji-search anuaimi/kijiji-search
-# docker kill kijiji-search
 # docker rm kijiji-search
-# docker push anuaimi/kijiji-search
+docker run -it --name kijiji-search anuaimi/kijiji-search
+```
+
+If you want to deploy the container to the cloud, you need to push the image to a registry
+
+```bash
+docker push anuaimi/kijiji-search
 ```
 
 ## Deploying
 
+The simplest way to run this code is to get a small VM at public cloud provider and run it there.  The example below uses DigitalOcean.  They have VMs that have Docker pre-installed.  Note, replace `--fingerprint--` with your actual SSH key fingerprint.
+
 ```bash
 doctl compute droplet create --image docker-20-04 --size s-1vcpu-1gb --region tor1 --ssh-keys --fingerprint-- kijiji-search
-# doctl compute droplet create --image ubuntu-20-04-x64 --size s-1vcpu-1gb --region tor1 --ssh-keys --fingerprint-- kijiji-search
 ssh root@serverIP
-# apt-get update
-# apt-get install -y docker.io
-
 ```
 
 ## Running
+
+You need to define the kijiji search and put the details in the `data/queries.json` file.
 
 with secrets
 
@@ -75,3 +68,16 @@ You can debug docker issues by starting a python container and running the vario
 from pyppeteer.launcher import Launcher
 ' '.join(Launcher().cmd)
 ```
+
+## TODO
+
+- deploy to cloud and see if still works (digital ocean)
+- setup to run with cron
+- sqlite doesn't work in k8s as could have several pods??
+
+- run every hour
+- monitor (through liveness probe?)
+- need some way to make sure it is still working??
+  - email log file (errors only) once a day
+- providate a way to update search details without a new deploy??
+  - have config in seperate directory that is shared with base filesystem
