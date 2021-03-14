@@ -12,8 +12,9 @@ make sure you have Pipenv install and then create a new environment for the proj
 
 ```bash
 pip install pipenv
+pipenv install
 pipenv shell
-pipenv --venv
+# pipenv --venv
 # add above to python.pythonPath in .vscode/settings.json
 ```
 
@@ -28,8 +29,6 @@ export MJ_API_SECRET="--api-secret--"
 
 ```bash
 docker build -t anuaimi/kijiji-search .
-# docker rm kijiji-search
-docker run -it --name kijiji-search anuaimi/kijiji-search
 ```
 
 If you want to deploy the container to the cloud, you need to push the image to a registry
@@ -56,8 +55,7 @@ with secrets
 ```bash
 export MY_API_KEY=""
 export MY_API_SECRET=""
-docker run -it --name kijiji-search -e MJ_API_KEY=$MJ_API_KEY -e MJ_API_SECRET=$MJ_API_SECRET kijiji-search
-docker run -it --name kijiji-search -e MJ_API_KEY=$MJ_API_KEY -e MJ_API_SECRET=$MJ_API_SECRET -v data:/data kijiji-search
+docker run -it --name kijiji-search -e MJ_API_KEY=$MJ_API_KEY -e MJ_API_SECRET=$MJ_API_SECRET -v $PWD/data:/data anuaimi/kijiji-search
 ```
 
 ## Debugging
@@ -72,12 +70,14 @@ from pyppeteer.launcher import Launcher
 ## TODO
 
 - deploy to cloud and see if still works (digital ocean)
+  - it does if create manually
+  - need to push to registry and try building from that
 - setup to run with cron
-- sqlite doesn't work in k8s as could have several pods??
-
-- run every hour
+  - still seeing timeouts at 30 sec
 - monitor (through liveness probe?)
 - need some way to make sure it is still working??
-  - email log file (errors only) once a day
 - providate a way to update search details without a new deploy??
   - have config in seperate directory that is shared with base filesystem
+- should the timeout be more than 30 seconds?
+- sqlite doesn't work in k8s as could have several pods??
+  - email log file (errors only) once a day
