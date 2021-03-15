@@ -58,6 +58,9 @@ export MY_API_SECRET=""
 docker run -it --name kijiji-search -e MJ_API_KEY=$MJ_API_KEY -e MJ_API_SECRET=$MJ_API_SECRET -v $PWD/data:/data anuaimi/kijiji-search
 ```
 
+You can find a pre-built docker container at 
+https://hub.docker.com/repository/docker/anuaimi/kijiji-search
+
 ## Debugging
 
 You can debug docker issues by starting a python container and running the various command in the docker file.  Also you can use the following to debug pyppeteer issues
@@ -66,18 +69,3 @@ You can debug docker issues by starting a python container and running the vario
 from pyppeteer.launcher import Launcher
 ' '.join(Launcher().cmd)
 ```
-
-## TODO
-
-- deploy to cloud and see if still works (digital ocean)
-  - it does if create manually
-  - need to push to registry and try building from that
-- setup to run with cron
-  - still seeing timeouts at 30 sec
-- monitor (through liveness probe?)
-- need some way to make sure it is still working??
-- providate a way to update search details without a new deploy??
-  - have config in seperate directory that is shared with base filesystem
-- should the timeout be more than 30 seconds?
-- sqlite doesn't work in k8s as could have several pods??
-  - email log file (errors only) once a day
