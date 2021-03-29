@@ -53,13 +53,20 @@ You need to define the kijiji search and put the details in the `data/queries.js
 with secrets
 
 ```bash
-export MY_API_KEY=""
-export MY_API_SECRET=""
+export MJ_API_KEY=""
+export MJ_API_SECRET=""
 docker run -it --name kijiji-search -e MJ_API_KEY=$MJ_API_KEY -e MJ_API_SECRET=$MJ_API_SECRET -v $PWD/data:/data anuaimi/kijiji-search
 ```
 
 You can find a pre-built docker container at 
 https://hub.docker.com/repository/docker/anuaimi/kijiji-search
+
+If you want to run the queries on a regular interval, you can use CRON.
+
+```bash
+crontab -e
+0,10,20,30,40,50 * * * * docker start kijiji-search
+```
 
 ## Debugging
 
